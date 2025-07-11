@@ -1,0 +1,102 @@
+const express = require("express");
+const cors = require("cors");
+const sqlite3 = require("sqlite3").verbose();
+const app = express();
+const port = 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Inicializa banco
+const db = new sqlite3.Database("frequencia.db");
+
+// Cria tabela se não existir
+db.run(`
+  CREATE TABLE IF NOT EXISTS frequencia (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    matricula TEXT,
+    data DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// Rota para registrar presença
+app.post("/registrar", (req, res) => {
+  const { matricula } = req.body;
+
+  if (!matricula) {
+    return res.status(400).json({ erro: "Matrícula é obrigatória" });
+  }
+
+  db.run(
+    "INSERT INTO frequencia (matricula) VALUES (?)",
+    [matricula],
+    function (err) {
+      if (err) {
+        console.error("Erro ao registrar presença:", err);
+        return res.status(500).json({ erro: "Erro ao registrar presença" });
+      }
+      res.json({ sucesso: true, id: this.lastID });
+    }
+  );
+});
+
+// Rota para buscar frequências com filtros flexíveis
+app.get("/frequencia", (req, res) => {
+  const { matricula, dataInicial, dataFinal } = req.query;
+
+  let query = "SELECT * FROM frequencia WHERE 1=1";
+  const params = [];
+
+  if (matricula) {
+    query += " AND LOWER(matricula) LIKE ?";
+    params.push(`%${matricula.toLowerCase()}%`);
+  }
+
+  if (dataInicial && dataFinal) {
+    query += " AND DATE(data) BETWEEN ? AND ?";
+    params.push(dataInicial, dataFinal);
+  } else if (dataInicial) {
+    query += " AND DATE(data) >= ?";
+    params.push(dataInicial);
+  } else if (dataFinal) {
+    query += " AND DATE(data) <= ?";
+    params.push(dataFinal);
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error("Erro ao buscar frequência:", err);
+      return res.status(500).json({ erro: "Erro ao buscar frequência" });
+    }
+    res.json(rows);
+  });
+});
+
+// ✅ Nova rota para deletar registros
+app.post("/frequencia/delete", (req, res) => {
+  const { ids } = req.body;
+
+  console.log("Recebido para deletar:", ids); // DEBUG
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    console.warn("Nenhum ID fornecido");
+    return res.status(400).json({ erro: "Nenhum ID fornecido para exclusão." });
+  }
+
+  const placeholders = ids.map(() => "?").join(", ");
+  const query = `DELETE FROM frequencia WHERE id IN (${placeholders})`;
+
+  db.run(query, ids, function (err) {
+    if (err) {
+      console.error("Erro ao deletar registros:", err.message);
+      return res.status(500).json({ erro: "Erro ao deletar registros." });
+    }
+
+    console.log(`Registros deletados com sucesso: ${this.changes}`);
+    res.json({ mensagem: "Registros deletados com sucesso." });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Servidor rodando em http://localhost:${port}`);
+});
