@@ -114,7 +114,7 @@ function App() {
 
   const deletarSelecionados = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/delete`, { ids: selecionados });
+      await axios.post(`${API_BASE_URL}/frequencia/delete`, { ids: selecionados });
       setModal(null);
       setSelecionados([]);
       setModoSelecao(false);
