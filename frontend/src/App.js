@@ -114,7 +114,9 @@ function App() {
 
   const deletarSelecionados = async () => {
     try {
-      await axios.post(`${API_BASE_URL}/frequencia/delete`, { ids: selecionados });
+      await axios.post(`${API_BASE_URL}/frequencia/delete`, {
+        ids: selecionados,
+      });
       setModal(null);
       setSelecionados([]);
       setModoSelecao(false);
@@ -128,22 +130,25 @@ function App() {
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
         <h1 className="text-3xl font-bold text-center text-slate-800 mb-6">
-          Frequência NFC
+          Registro de chamada Carisma
         </h1>
 
         {/* Seção Registrar */}
         <section className="mb-8">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
+          <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
+            📌 Registro de presença
+          </h2>
+          <div className="flex flex-col sm:flex-row gap-4">
             <input
               type="text"
               placeholder="Digite a matrícula"
               value={novaMatricula}
               onChange={(e) => setNovaMatricula(e.target.value)}
-              className="w-full sm:w-1/2 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <button
               onClick={registrarPresenca}
-              className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2 rounded-lg transition"
+              className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition whitespace-nowrap"
             >
               Registrar Presença
             </button>
@@ -157,6 +162,9 @@ function App() {
 
         {/* Seção Filtros */}
         <section className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
+            🔍 Buscar presença
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <input
               type="text"
