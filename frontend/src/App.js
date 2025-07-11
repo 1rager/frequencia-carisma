@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { API_BASE_URL } from "./config";
 
 function App() {
   const [matricula, setMatricula] = useState("");
@@ -28,7 +29,7 @@ function App() {
     const hojeStr = hoje.toISOString().split("T")[0];
 
     try {
-      const res = await axios.get(`${API}/frequencia`, {
+      const res = await axios.get(`${API_BASE_URL}/frequencia`, {
         params: { dataInicial: inicioMes, dataFinal: hojeStr },
       });
       setRegistros(res.data);
@@ -39,7 +40,7 @@ function App() {
 
   const buscarFrequencia = async () => {
     try {
-      const res = await axios.get(`${API}/frequencia`, {
+      const res = await axios.get(`${API_BASE_URL}/frequencia`, {
         params: {
           matricula: matricula || undefined,
           dataInicial: dataInicial || undefined,
@@ -62,7 +63,9 @@ function App() {
   const registrarPresenca = async () => {
     if (!novaMatricula.trim()) return;
     try {
-      await axios.post(`${API}/registrar`, { matricula: novaMatricula.trim() });
+      await axios.post(`${API_BASE_URL}/registrar`, {
+        matricula: novaMatricula.trim(),
+      });
       setMensagem(`✔ Presença registrada para ${novaMatricula}`);
       setNovaMatricula("");
       carregarRegistrosDoMesAtual();
@@ -74,7 +77,7 @@ function App() {
 
   const exportarParaExcel = async () => {
     try {
-      const res = await axios.get(`${API}/frequencia`, {
+      const res = await axios.get(`${API_BASE_URL}/frequencia`, {
         params: {
           matricula: matricula || undefined,
           dataInicial: dataInicial || undefined,
@@ -111,7 +114,7 @@ function App() {
 
   const deletarSelecionados = async () => {
     try {
-      await axios.post(`${API}/frequencia/delete`, { ids: selecionados });
+      await axios.post(`${API_BASE_URL}/delete`, { ids: selecionados });
       setModal(null);
       setSelecionados([]);
       setModoSelecao(false);
