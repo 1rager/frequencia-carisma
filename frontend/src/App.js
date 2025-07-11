@@ -14,7 +14,7 @@ function App() {
   const [modoSelecao, setModoSelecao] = useState(false);
   const [modal, setModal] = useState(null);
 
-  const API = "https://SEU_BACKEND_URL";
+  const API = "https://frequencia-backend.up.railway.app";
 
   useEffect(() => {
     carregarRegistrosDoMesAtual();

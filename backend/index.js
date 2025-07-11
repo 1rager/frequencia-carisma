@@ -3,9 +3,23 @@ const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
 const app = express();
 const port = process.env.PORT || 3000;
+const allowedOrigins = [
+  "https://frequencia-carisma.vercel.app",
+  "http://localhost:3000", // para testes locais
+];
 
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin))
+        return callback(null, true);
+      return callback(new Error("Não autorizado pelo CORS"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+  })
+);
 
-app.use(cors());
+app.options("*", cors());
 app.use(express.json());
 
 // Inicializa banco
