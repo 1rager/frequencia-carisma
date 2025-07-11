@@ -5,21 +5,23 @@ const app = express();
 const port = process.env.PORT || 3000;
 const allowedOrigins = [
   "https://frequencia-carisma.vercel.app",
-  "http://localhost:3000", // para testes locais
+  "http://localhost:3000", // já está aqui
+  "http://localhost:3001", // <-- adicione esta linha
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin))
-        return callback(null, true);
-      return callback(new Error("Não autorizado pelo CORS"));
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-  })
-);
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin))
+//         return callback(null, true);
+//       return callback(new Error("Não autorizado pelo CORS"));
+//     },
+//     methods: ["GET", "POST", "OPTIONS"],
+//   })
+// );
 
-app.options("*", cors());
+
+app.use(cors());
 app.use(express.json());
 
 // Inicializa banco
