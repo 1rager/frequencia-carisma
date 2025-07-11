@@ -1,0 +1,94 @@
+/* Reset básico */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f7f7f7;
+}
+
+/* Fade de mensagens */
+.fade-message {
+  transition: opacity 0.5s ease-in-out;
+  opacity: 1;
+}
+
+.fade-message.hidden {
+  opacity: 0;
+}
+
+/* Botões */
+button {
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Tabelas */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px;
+}
+
+th {
+  background-color: #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+}
+
+td {
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+tr:hover td {
+  background-color: #f3f4f6;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="date"] {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  border-radius: 6px;
+  width: 100%;
+  transition: border 0.3s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4b5563;
+}
+
+/* Modal background */
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Modal content */
+.modal-content {
+  background-color: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .grid-cols-5 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
