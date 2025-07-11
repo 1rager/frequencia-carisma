@@ -2,76 +2,70 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import "./App.css";
 
 function App() {
   const [matricula, setMatricula] = useState("");
+  const [novaMatricula, setNovaMatricula] = useState("");
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
   const [registros, setRegistros] = useState([]);
-  const [novaMatricula, setNovaMatricula] = useState("");
   const [mensagem, setMensagem] = useState("");
-  const [mostrarModalExportar, setMostrarModalExportar] = useState(false);
-  const [mostrarCheckbox, setMostrarCheckbox] = useState(false);
   const [selecionados, setSelecionados] = useState([]);
-  const [mostrarModalExcluir, setMostrarModalExcluir] = useState(false);
+  const [modoSelecao, setModoSelecao] = useState(false);
+  const [modal, setModal] = useState(null);
 
-  const backendUrl = "http://localhost:3001"; // substitua pela URL real se necessário
+  const API = "https://SEU_BACKEND_URL";
 
   useEffect(() => {
-    const buscarRegistrosDoMesAtual = async () => {
-      const hoje = new Date();
-      const ano = hoje.getFullYear();
-      const mes = String(hoje.getMonth() + 1).padStart(2, "0");
-      const dia = String(hoje.getDate()).padStart(2, "0");
-
-      try {
-        const response = await axios.get(`${backendUrl}/frequencia`, {
-          params: {
-            dataInicial: `${ano}-${mes}-01`,
-            dataFinal: `${ano}-${mes}-${dia}`,
-          },
-        });
-        setRegistros(response.data);
-      } catch (error) {
-        console.error("Erro ao carregar registros:", error);
-      }
-    };
-
-    buscarRegistrosDoMesAtual();
+    carregarRegistrosDoMesAtual();
   }, []);
+
+  const carregarRegistrosDoMesAtual = async () => {
+    const hoje = new Date();
+    const inicioMes = `${hoje.getFullYear()}-${String(
+      hoje.getMonth() + 1
+    ).padStart(2, "0")}-01`;
+    const hojeStr = hoje.toISOString().split("T")[0];
+
+    try {
+      const res = await axios.get(`${API}/frequencia`, {
+        params: { dataInicial: inicioMes, dataFinal: hojeStr },
+      });
+      setRegistros(res.data);
+    } catch (e) {
+      console.error("Erro ao carregar registros:", e);
+    }
+  };
 
   const buscarFrequencia = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/frequencia`, {
+      const res = await axios.get(`${API}/frequencia`, {
         params: {
           matricula: matricula || undefined,
           dataInicial: dataInicial || undefined,
           dataFinal: dataFinal || undefined,
         },
       });
-      setRegistros(response.data);
-    } catch (error) {
-      console.error("Erro ao buscar frequência:", error);
+      setRegistros(res.data);
+    } catch (e) {
+      console.error("Erro ao buscar:", e);
     }
   };
 
-  const limparFiltros = async () => {
+  const limparFiltros = () => {
     setMatricula("");
     setDataInicial("");
     setDataFinal("");
-    const response = await axios.get(`${backendUrl}/frequencia`);
-    setRegistros(response.data);
+    carregarRegistrosDoMesAtual();
   };
 
   const registrarPresenca = async () => {
-    if (!novaMatricula) return alert("Digite uma matrícula válida");
-
+    if (!novaMatricula.trim()) return;
     try {
-      await axios.post(`${backendUrl}/registrar`, { matricula: novaMatricula });
-      setMensagem(`✅ Presença registrada para ${novaMatricula}`);
+      await axios.post(`${API}/registrar`, { matricula: novaMatricula.trim() });
+      setMensagem(`✔ Presença registrada para ${novaMatricula}`);
       setNovaMatricula("");
-      buscarFrequencia();
+      carregarRegistrosDoMesAtual();
       setTimeout(() => setMensagem(""), 3000);
     } catch {
       alert("Erro ao registrar presença");
@@ -80,7 +74,7 @@ function App() {
 
   const exportarParaExcel = async () => {
     try {
-      const response = await axios.get(`${backendUrl}/frequencia`, {
+      const res = await axios.get(`${API}/frequencia`, {
         params: {
           matricula: matricula || undefined,
           dataInicial: dataInicial || undefined,
@@ -88,184 +82,170 @@ function App() {
         },
       });
 
-      if (response.data.length === 0) return alert("Nenhum dado encontrado.");
-
       const worksheet = XLSX.utils.json_to_sheet(
-        response.data.map((item) => ({
+        res.data.map((item) => ({
           ID: item.id,
           Matrícula: item.matricula,
           "Data/Hora": new Date(item.data).toLocaleString("pt-BR"),
         }))
       );
 
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Frequência");
-      const excelBuffer = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, worksheet, "Frequência");
 
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type: "application/octet-stream",
       });
-
       saveAs(blob, "frequencia.xlsx");
-      setMostrarModalExportar(false);
-    } catch (error) {
+    } catch {
       alert("Erro ao exportar");
-      console.error(error);
     }
   };
 
-  const alternarCheckbox = () => {
-    setMostrarCheckbox(!mostrarCheckbox);
-    setSelecionados([]);
-  };
-
-  const handleSelecionar = (id) => {
+  const toggleSelecionado = (id) => {
     setSelecionados((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
-  const deletarRegistros = async () => {
+  const deletarSelecionados = async () => {
     try {
-      await axios.post(`${backendUrl}/frequencia/delete`, {
-        ids: selecionados,
-      });
-      setMostrarModalExcluir(false);
+      await axios.post(`${API}/frequencia/delete`, { ids: selecionados });
+      setModal(null);
       setSelecionados([]);
-      setMostrarCheckbox(false);
-      buscarFrequencia();
-    } catch (error) {
-      alert("Erro ao deletar registros");
-      console.error(error);
+      setModoSelecao(false);
+      carregarRegistrosDoMesAtual();
+    } catch {
+      alert("Erro ao deletar");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-md">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          📇 Sistema de Controle de Frequência NFC
+    <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
+      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+        <h1 className="text-3xl font-bold text-center text-slate-800 mb-6">
+          Frequência NFC
         </h1>
 
-        {/* REGISTRO */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">Registrar presença</h2>
-          <div className="flex flex-col sm:flex-row gap-4">
+        {/* Seção Registrar */}
+        <section className="mb-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
             <input
               type="text"
-              placeholder="Matrícula"
+              placeholder="Digite a matrícula"
               value={novaMatricula}
               onChange={(e) => setNovaMatricula(e.target.value)}
-              className="flex-1 border border-gray-300 px-4 py-2 rounded-md shadow-sm"
+              className="w-full sm:w-1/2 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <button
               onClick={registrarPresenca}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 shadow-md"
+              className="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2 rounded-lg transition"
             >
-              Registrar
+              Registrar Presença
             </button>
           </div>
           {mensagem && (
-            <p className="text-green-600 mt-3 animate-fade-in">{mensagem}</p>
+            <div className="text-green-600 mt-3 text-center font-medium">
+              {mensagem}
+            </div>
           )}
-        </div>
+        </section>
 
-        {/* FILTROS */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">Filtrar presença</h2>
+        {/* Seção Filtros */}
+        <section className="mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <input
               type="text"
               placeholder="Matrícula"
               value={matricula}
               onChange={(e) => setMatricula(e.target.value)}
-              className="col-span-2 border border-gray-300 rounded-md px-4 py-2"
+              className="col-span-1 sm:col-span-1 px-4 py-2 border rounded-lg border-slate-300"
             />
             <input
               type="date"
               value={dataInicial}
               onChange={(e) => setDataInicial(e.target.value)}
-              className="border border-gray-300 rounded-md px-4 py-2"
+              className="col-span-1 px-4 py-2 border rounded-lg border-slate-300"
             />
             <input
               type="date"
               value={dataFinal}
               onChange={(e) => setDataFinal(e.target.value)}
-              className="border border-gray-300 rounded-md px-4 py-2"
+              className="col-span-1 px-4 py-2 border rounded-lg border-slate-300"
             />
             <button
               onClick={buscarFrequencia}
-              className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition"
             >
               Buscar
             </button>
-          </div>
-          <div className="mt-4 flex justify-end">
             <button
               onClick={limparFiltros}
-              className="text-sm text-blue-600 hover:underline"
+              className="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg transition"
             >
-              Limpar filtros
+              Limpar
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* AÇÕES */}
-        <div className="flex justify-between items-center mb-4">
+        {/* Ações */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
           <button
-            onClick={alternarCheckbox}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            onClick={() => {
+              setModoSelecao(!modoSelecao);
+              setSelecionados([]);
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
           >
-            {mostrarCheckbox ? "Cancelar" : "Deletar Registros"}
+            {modoSelecao ? "Cancelar Exclusão" : "Selecionar para Deletar"}
           </button>
+
           <button
-            onClick={() => setMostrarModalExportar(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={exportarParaExcel}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
           >
             Exportar Excel
           </button>
         </div>
 
-        {/* TABELA */}
-        <div className="overflow-x-auto shadow-sm rounded-lg">
-          <table className="w-full table-auto border-collapse bg-white">
-            <thead className="bg-gray-200 text-gray-700">
+        {/* Tabela */}
+        <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm">
+          <table className="w-full min-w-[600px] table-auto text-left">
+            <thead className="bg-slate-100">
               <tr>
-                {mostrarCheckbox && <th className="px-4 py-3">✓</th>}
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Matrícula</th>
-                <th className="px-4 py-3 text-left">Data/Hora</th>
+                {modoSelecao && <th className="p-3">✓</th>}
+                <th className="p-3">ID</th>
+                <th className="p-3">Matrícula</th>
+                <th className="p-3">Data/Hora</th>
               </tr>
             </thead>
             <tbody>
               {registros.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-6 text-gray-500">
+                  <td colSpan="4" className="text-center py-6 text-slate-500">
                     Nenhum registro encontrado.
                   </td>
                 </tr>
               ) : (
-                registros.map((registro) => (
+                registros.map((item) => (
                   <tr
-                    key={registro.id}
-                    className="hover:bg-gray-100 transition-colors"
+                    key={item.id}
+                    className="border-t hover:bg-slate-50 transition"
                   >
-                    {mostrarCheckbox && (
-                      <td className="px-4 py-3">
+                    {modoSelecao && (
+                      <td className="p-3">
                         <input
                           type="checkbox"
-                          checked={selecionados.includes(registro.id)}
-                          onChange={() => handleSelecionar(registro.id)}
+                          checked={selecionados.includes(item.id)}
+                          onChange={() => toggleSelecionado(item.id)}
                         />
                       </td>
                     )}
-                    <td className="px-4 py-3">{registro.id}</td>
-                    <td className="px-4 py-3">{registro.matricula}</td>
-                    <td className="px-4 py-3">
-                      {new Date(registro.data).toLocaleString("pt-BR")}
+                    <td className="p-3">{item.id}</td>
+                    <td className="p-3">{item.matricula}</td>
+                    <td className="p-3">
+                      {new Date(item.data).toLocaleString("pt-BR")}
                     </td>
                   </tr>
                 ))
@@ -274,66 +254,40 @@ function App() {
           </table>
         </div>
 
-        {mostrarCheckbox && selecionados.length > 0 && (
+        {modoSelecao && selecionados.length > 0 && (
           <div className="flex justify-end mt-4">
             <button
-              onClick={() => setMostrarModalExcluir(true)}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              onClick={() => setModal("confirmarExclusao")}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
             >
-              Deletar selecionados
+              Deletar Selecionados
             </button>
           </div>
         )}
       </div>
 
-      {/* MODAL EXPORTAÇÃO */}
-      {mostrarModalExportar && (
+      {/* Modal de confirmação */}
+      {modal === "confirmarExclusao" && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              Exportar Excel
-            </h2>
-            <p>
-              Confirme para exportar os dados atuais com os filtros aplicados.
-            </p>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setMostrarModalExportar(false)}
-                className="bg-gray-400 text-white px-4 py-2 rounded"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={exportarParaExcel}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Exportar agora
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EXCLUSÃO */}
-      {mostrarModalExcluir && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold text-red-600 mb-4">
+          <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full">
+            <h3 className="text-xl font-bold text-red-700 mb-4">
               Confirmar exclusão
-            </h2>
-            <p>Tem certeza que deseja excluir os registros selecionados?</p>
-            <div className="flex justify-end gap-2 mt-4">
+            </h3>
+            <p className="text-slate-700 mb-6">
+              Tem certeza que deseja excluir {selecionados.length} registro(s)?
+            </p>
+            <div className="flex justify-end gap-3">
               <button
-                onClick={() => setMostrarModalExcluir(false)}
-                className="bg-gray-400 text-white px-4 py-2 rounded"
+                onClick={() => setModal(null)}
+                className="bg-slate-300 text-slate-800 px-4 py-2 rounded-lg"
               >
                 Cancelar
               </button>
               <button
-                onClick={deletarRegistros}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                onClick={deletarSelecionados}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg"
               >
-                Deletar agora
+                Confirmar
               </button>
             </div>
           </div>
