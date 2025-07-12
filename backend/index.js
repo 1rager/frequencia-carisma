@@ -20,12 +20,26 @@ const allowedOrigins = [
 //   })
 // );
 
-
 app.use(cors());
 app.use(express.json());
 
 // Inicializa banco
 const db = new sqlite3.Database("frequencia.db");
+
+// Cria tabela se não existir
+db.run(`
+  CREATE TABLE IF NOT EXISTS alunos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    telefone TEXT,
+    rua TEXT,
+    numero TEXT,
+    bairro TEXT,
+    cidade TEXT,
+    estado TEXT,
+    pais TEXT
+  )
+`);
 
 // Cria tabela se não existir
 db.run(`
@@ -89,7 +103,7 @@ app.get("/frequencia", (req, res) => {
   });
 });
 
-// ✅ Nova rota para deletar registros
+// Deletar frequências
 app.post("/frequencia/delete", (req, res) => {
   const { ids } = req.body;
 
@@ -111,6 +125,67 @@ app.post("/frequencia/delete", (req, res) => {
 
     console.log(`Registros deletados com sucesso: ${this.changes}`);
     res.json({ mensagem: "Registros deletados com sucesso." });
+  });
+});
+
+// Criar aluno
+app.post("/alunos", (req, res) => {
+  const aluno = req.body;
+  console.log(
+    "Dados recebidos para cadastro de aluno:",
+    JSON.stringify(aluno, null, 2)
+  );
+  const { nome, telefone, rua, numero, bairro, cidade, estado, pais } = aluno;
+
+  const query = `INSERT INTO alunos (nome, telefone, rua, numero, bairro, cidade, estado, pais)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  db.run(
+    query,
+    [nome, telefone, rua, numero, bairro, cidade, estado, pais],
+    function (err) {
+      if (err) {
+        console.error("Erro ao inserir aluno:", err.message);
+        return res.status(500).json({ erro: err.message });
+      }
+      console.log("Aluno inserido com ID:", this.lastID);
+      res.status(201).json({ id: this.lastID });
+    }
+  );
+});
+
+// Listar alunos
+app.get("/alunos", (req, res) => {
+  db.all("SELECT * FROM alunos", [], (err, rows) => {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json(rows);
+  });
+});
+
+// Atualizar aluno
+app.put("/alunos/:id", (req, res) => {
+  const { id } = req.params;
+  const { nome, telefone, rua, numero, bairro, cidade, estado, pais } =
+    req.body;
+
+  const query = `UPDATE alunos SET nome = ?, telefone = ?, rua = ?, numero = ?, bairro = ?, cidade = ?, estado = ?, pais = ?
+                 WHERE id = ?`;
+  db.run(
+    query,
+    [nome, telefone, rua, numero, bairro, cidade, estado, pais, id],
+    function (err) {
+      if (err) return res.status(500).json({ erro: err.message });
+      res.json({ id });
+    }
+  );
+});
+
+// Deletar aluno
+app.delete("/alunos/:id", (req, res) => {
+  const { id } = req.params;
+  db.run("DELETE FROM alunos WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ erro: err.message });
+    res.json({ id });
   });
 });
 

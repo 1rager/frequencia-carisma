@@ -3,23 +3,49 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { API_BASE_URL } from "./config";
+import InputMask from "react-input-mask";
 
 function App() {
-  const [matricula, setMatricula] = useState("");
+  const [abaAtiva, setAbaAtiva] = useState("presenca");
+
+  // Estados já existentes
   const [novaMatricula, setNovaMatricula] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [matricula, setMatricula] = useState("");
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
   const [registros, setRegistros] = useState([]);
-  const [mensagem, setMensagem] = useState("");
-  const [selecionados, setSelecionados] = useState([]);
   const [modoSelecao, setModoSelecao] = useState(false);
+  const [selecionados, setSelecionados] = useState([]);
   const [modal, setModal] = useState(null);
+
+  // Novos estados para cadastro de aluno
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [rua, setRua] = useState("");
+  const [numero, setNumero] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [estado, setEstado] = useState("");
+  const [pais, setPais] = useState("");
+  const [mensagemAluno, setMensagemAluno] = useState("");
 
   const API = "https://frequencia-backend.up.railway.app";
 
   useEffect(() => {
     carregarRegistrosDoMesAtual();
   }, []);
+
+  const [alunos, setAlunos] = useState([]);
+
+  useEffect(() => {
+    if (abaAtiva === "cadastro") {
+      axios
+        .get("http://localhost:3000/alunos")
+        .then((res) => setAlunos(res.data))
+        .catch((err) => console.error("Erro ao buscar alunos:", err));
+    }
+  }, [abaAtiva]);
 
   const carregarRegistrosDoMesAtual = async () => {
     const hoje = new Date();
@@ -126,6 +152,59 @@ function App() {
     }
   };
 
+  const buscarAlunos = () => {
+    axios
+      .get("http://localhost:3000/alunos")
+      .then((res) => setAlunos(res.data))
+      .catch((err) => console.error("Erro ao buscar alunos:", err));
+  };
+
+  const cadastrarAluno = async () => {
+    try {
+      const aluno = {
+        nome,
+        telefone,
+        rua,
+        numero,
+        bairro,
+        cidade,
+        estado,
+        pais,
+      };
+
+      // Validação mínima opcional
+      if (!aluno.nome || aluno.nome.trim() === "") {
+        setMensagemAluno("⚠️ Nome é obrigatório.");
+        return;
+      }
+
+      const resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
+
+      if (resposta.status === 201 && resposta.data.id) {
+        setMensagemAluno("✅ Aluno cadastrado com sucesso!");
+
+        // Limpar formulário
+        setNome("");
+        setTelefone("");
+        setRua("");
+        setNumero("");
+        setBairro("");
+        setCidade("");
+        setEstado("");
+        setPais("");
+
+        // Atualizar lista
+        buscarAlunos();
+      } else {
+        console.warn("Resposta inesperada:", resposta);
+        setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno.");
+      }
+    } catch (error) {
+      console.error("Erro ao cadastrar aluno:", error);
+      setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
@@ -133,147 +212,315 @@ function App() {
           Registro de chamada Carisma
         </h1>
 
-        {/* Seção Registrar */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
-            📌 Registro de presença
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="Digite a matrícula"
-              value={novaMatricula}
-              onChange={(e) => setNovaMatricula(e.target.value)}
-              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
+        {/* Abas */}
+        <div className="border-b border-slate-300 mb-8">
+          <nav className="-mb-px flex space-x-6 justify-center">
             <button
-              onClick={registrarPresenca}
-              className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition whitespace-nowrap"
+              onClick={() => setAbaAtiva("presenca")}
+              className={`px-4 py-2 border-b-2 font-medium ${
+                abaAtiva === "presenca"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-500 hover:text-sky-600 hover:border-sky-300"
+              }`}
             >
-              Registrar Presença
-            </button>
-          </div>
-          {mensagem && (
-            <div className="text-green-600 mt-3 text-center font-medium">
-              {mensagem}
-            </div>
-          )}
-        </section>
-
-        {/* Seção Filtros */}
-        <section className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
-            🔍 Buscar presença
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            <input
-              type="text"
-              placeholder="Matrícula"
-              value={matricula}
-              onChange={(e) => setMatricula(e.target.value)}
-              className="col-span-1 sm:col-span-1 px-4 py-2 border rounded-lg border-slate-300"
-            />
-            <input
-              type="date"
-              value={dataInicial}
-              onChange={(e) => setDataInicial(e.target.value)}
-              className="col-span-1 px-4 py-2 border rounded-lg border-slate-300"
-            />
-            <input
-              type="date"
-              value={dataFinal}
-              onChange={(e) => setDataFinal(e.target.value)}
-              className="col-span-1 px-4 py-2 border rounded-lg border-slate-300"
-            />
-            <button
-              onClick={buscarFrequencia}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition"
-            >
-              Buscar
+              Registro de Presença
             </button>
             <button
-              onClick={limparFiltros}
-              className="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg transition"
+              onClick={() => setAbaAtiva("cadastro")}
+              className={`px-4 py-2 border-b-2 font-medium ${
+                abaAtiva === "cadastro"
+                  ? "border-sky-600 text-sky-600"
+                  : "border-transparent text-slate-500 hover:text-sky-600 hover:border-sky-300"
+              }`}
             >
-              Limpar
+              Cadastro de Aluno
             </button>
-          </div>
-        </section>
-
-        {/* Ações */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-          <button
-            onClick={() => {
-              setModoSelecao(!modoSelecao);
-              setSelecionados([]);
-            }}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-          >
-            {modoSelecao ? "Cancelar Exclusão" : "Selecionar para Deletar"}
-          </button>
-
-          <button
-            onClick={exportarParaExcel}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-          >
-            Exportar Excel
-          </button>
+          </nav>
         </div>
 
-        {/* Tabela */}
-        <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm">
-          <table className="w-full min-w-[600px] table-auto text-left">
-            <thead className="bg-slate-100">
-              <tr>
-                {modoSelecao && <th className="p-3">✓</th>}
-                <th className="p-3">ID</th>
-                <th className="p-3">Matrícula</th>
-                <th className="p-3">Data/Hora</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registros.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="text-center py-6 text-slate-500">
-                    Nenhum registro encontrado.
-                  </td>
-                </tr>
-              ) : (
-                registros.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-t hover:bg-slate-50 transition"
-                  >
-                    {modoSelecao && (
-                      <td className="p-3">
-                        <input
-                          type="checkbox"
-                          checked={selecionados.includes(item.id)}
-                          onChange={() => toggleSelecionado(item.id)}
-                        />
-                      </td>
-                    )}
-                    <td className="p-3">{item.id}</td>
-                    <td className="p-3">{item.matricula}</td>
-                    <td className="p-3">
-                      {new Date(item.data).toLocaleString("pt-BR")}
-                    </td>
-                  </tr>
-                ))
+        {/* Conteúdo da aba de Registro */}
+        {abaAtiva === "presenca" && (
+          <>
+            {/* Registrar presença */}
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
+                📌 Registro de presença
+              </h2>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input
+                  type="text"
+                  placeholder="Digite a matrícula"
+                  value={novaMatricula}
+                  onChange={(e) => setNovaMatricula(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg"
+                />
+                <button
+                  onClick={registrarPresenca}
+                  className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg"
+                >
+                  Registrar Presença
+                </button>
+              </div>
+              {mensagem && (
+                <div className="text-green-600 mt-3 text-center font-medium">
+                  {mensagem}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </section>
 
-        {modoSelecao && selecionados.length > 0 && (
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={() => setModal("confirmarExclusao")}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
-            >
-              Deletar Selecionados
-            </button>
-          </div>
+            {/* Filtros */}
+            <section className="mb-6">
+              <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
+                🔍 Buscar presença
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <input
+                  type="text"
+                  placeholder="Matrícula"
+                  value={matricula}
+                  onChange={(e) => setMatricula(e.target.value)}
+                  className="px-4 py-2 border rounded-lg border-slate-300"
+                />
+                <input
+                  type="date"
+                  value={dataInicial}
+                  onChange={(e) => setDataInicial(e.target.value)}
+                  className="px-4 py-2 border rounded-lg border-slate-300"
+                />
+                <input
+                  type="date"
+                  value={dataFinal}
+                  onChange={(e) => setDataFinal(e.target.value)}
+                  className="px-4 py-2 border rounded-lg border-slate-300"
+                />
+                <button
+                  onClick={buscarFrequencia}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg"
+                >
+                  Buscar
+                </button>
+                <button
+                  onClick={limparFiltros}
+                  className="bg-slate-400 hover:bg-slate-500 text-white px-4 py-2 rounded-lg"
+                >
+                  Limpar
+                </button>
+              </div>
+            </section>
+
+            {/* Ações */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+              <button
+                onClick={() => {
+                  setModoSelecao(!modoSelecao);
+                  setSelecionados([]);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                {modoSelecao ? "Cancelar Exclusão" : "Selecionar para Deletar"}
+              </button>
+              <button
+                onClick={exportarParaExcel}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+              >
+                Exportar Excel
+              </button>
+            </div>
+
+            {/* Tabela */}
+            <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm">
+              <table className="w-full min-w-[600px] table-auto text-left">
+                <thead className="bg-slate-100">
+                  <tr>
+                    {modoSelecao && <th className="p-3">✓</th>}
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Matrícula</th>
+                    <th className="p-3">Data/Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registros.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="text-center py-6 text-slate-500"
+                      >
+                        Nenhum registro encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    registros.map((item) => (
+                      <tr key={item.id} className="border-t hover:bg-slate-50">
+                        {modoSelecao && (
+                          <td className="p-3">
+                            <input
+                              type="checkbox"
+                              checked={selecionados.includes(item.id)}
+                              onChange={() => toggleSelecionado(item.id)}
+                            />
+                          </td>
+                        )}
+                        <td className="p-3">{item.id}</td>
+                        <td className="p-3">{item.matricula}</td>
+                        <td className="p-3">
+                          {new Date(item.data).toLocaleString("pt-BR")}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {modoSelecao && selecionados.length > 0 && (
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setModal("confirmarExclusao")}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+                >
+                  Deletar Selecionados
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Conteúdo da aba de Cadastro */}
+        {abaAtiva === "cadastro" && (
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
+              🧍 Cadastro de Aluno
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+              <InputMask
+                mask="(99) 99999-9999"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+              >
+                {(inputProps) => (
+                  <input
+                    {...inputProps}
+                    type="text"
+                    placeholder="Telefone"
+                    className="px-4 py-2 border border-slate-300 rounded-lg w-full"
+                  />
+                )}
+              </InputMask>
+              <input
+                type="text"
+                placeholder="Rua"
+                value={rua}
+                onChange={(e) => setRua(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Número"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                maxLength={20}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+
+              <input
+                type="text"
+                placeholder="Bairro"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Cidade"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+
+              <input
+                type="text"
+                placeholder="Estado"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="País"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                maxLength={254}
+                className="px-4 py-2 border border-slate-300 rounded-lg"
+              />
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={cadastrarAluno}
+                className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-lg"
+              >
+                Cadastrar Aluno
+              </button>
+            </div>
+            {mensagemAluno && (
+              <div className="mt-2 text-center text-sm text-sky-700 font-medium">
+                {mensagemAluno}
+              </div>
+            )}
+
+            {/* Tabela de Alunos */}
+            <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm mb-6 mt-6">
+              <table className="w-full min-w-[600px] table-auto text-left">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Nome</th>
+                    <th className="p-3">Telefone</th>
+                    <th className="p-3">Endereço</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alunos.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="text-center py-6 text-slate-500"
+                      >
+                        Nenhum aluno cadastrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    alunos.map((aluno) => (
+                      <tr
+                        key={aluno.id}
+                        className="border-t hover:bg-slate-50 transition"
+                      >
+                        <td className="p-3">{aluno.id}</td>
+                        <td className="p-3">{aluno.nome}</td>
+                        <td className="p-3">{aluno.telefone}</td>
+                        <td className="p-3">
+                          {aluno.rua}, {aluno.numero} - {aluno.bairro},{" "}
+                          {aluno.cidade} - {aluno.estado}, {aluno.pais}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
       </div>
 
