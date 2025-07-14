@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -18,6 +19,7 @@ function App() {
   const [modoSelecao, setModoSelecao] = useState(false);
   const [selecionados, setSelecionados] = useState([]);
   const [modal, setModal] = useState(null);
+  const [alert, setAlert] = useState({ message: "", type: "success" });
 
   // Novos estados para cadastro de aluno
   const [nome, setNome] = useState("");
@@ -92,8 +94,11 @@ function App() {
       (a) => a.matricula === novaMatricula.trim()
     );
     if (!alunoExiste) {
-      setMensagem("⚠️ Matrícula não encontrada. Cadastre o aluno primeiro.");
-      setTimeout(() => setMensagem(""), 3000);
+      setAlert({
+        message: "⚠️ Matrícula não encontrada. Cadastre o aluno primeiro.",
+        type: "error",
+      });
+      setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
       return;
     }
 
@@ -101,12 +106,16 @@ function App() {
       await axios.post(`${API_BASE_URL}/registrar`, {
         matricula: novaMatricula.trim(),
       });
-      setMensagem(`✔ Presença registrada para ${novaMatricula}`);
+      setAlert({
+        message: `✔ Presença registrada para ${novaMatricula}`,
+        type: "success",
+      });
       setNovaMatricula("");
       carregarRegistrosDoMesAtual();
-      setTimeout(() => setMensagem(""), 3000);
+      setTimeout(() => setAlert({ message: "", type: "success" }), 3000);
     } catch {
-      alert("Erro ao registrar presença");
+      setAlert({ message: "❌ Erro ao registrar presença", type: "error" });
+      setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
     }
   };
 
@@ -183,17 +192,21 @@ function App() {
 
       // Validação mínima opcional
       if (!aluno.nome || aluno.nome.trim() === "") {
-        setMensagemAluno("⚠️ Nome é obrigatório.");
-        setTimeout(() => setMensagemAluno(""), 3000);
+        setAlert({ message: "⚠️ Nome é obrigatório.", type: "error" });
+        setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
         return;
       }
 
       const resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
 
       if (resposta.status === 201 && resposta.data.id) {
-        setMensagemAluno("✅ Aluno cadastrado com sucesso!"),
-          // Limpar formulário
-          setNome("");
+        setAlert({
+          message: "✅ Aluno cadastrado com sucesso!",
+          type: "success",
+        });
+        setTimeout(() => setAlert({ message: "", type: "success" }), 3000);
+        // Limpar formulário
+        setNome("");
         setTelefone("");
         setRua("");
         setNumero("");
@@ -208,14 +221,21 @@ function App() {
         console.warn("Resposta inesperada:", resposta);
         setTimeout(
           () =>
-            setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno."),
+            setAlert({
+              message: "⚠️ Ocorreu um problema ao cadastrar o aluno.",
+              type: "error",
+            }),
           3000
         );
       }
     } catch (error) {
       console.error("Erro ao cadastrar aluno:", error);
       setTimeout(
-        () => setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente."),
+        () =>
+          setAlert({
+            message: "❌ Erro ao cadastrar aluno. Tente novamente.",
+            type: "error",
+          }),
         3000
       );
     }
@@ -229,29 +249,62 @@ function App() {
 
   const deletarAlunosSelecionados = async () => {
     if (alunosSelecionados.length === 0) return;
-
-    const confirmacao = window.confirm(
-      "Tem certeza que deseja excluir os alunos selecionados?"
-    );
-    if (!confirmacao) return;
-
     try {
       for (const id of alunosSelecionados) {
         await axios.delete(`${API_BASE_URL}/alunos/${id}`);
       }
-
-      setMensagemAluno("✅ Alunos excluídos com sucesso!");
+      setAlert({
+        message: "✅ Alunos excluídos com sucesso!",
+        type: "success",
+      });
       setAlunosSelecionados([]);
       buscarAlunos();
     } catch (e) {
       console.error("Erro ao deletar alunos:", e);
-      setMensagemAluno("❌ Erro ao deletar alunos.");
+      setAlert({ message: "❌ Erro ao deletar alunos.", type: "error" });
     }
   };
+
+  function AlertMessage({ message, type, onClose }) {
+    const [show, setShow] = useState(false);
+
+    useEffect(() => {
+      if (message) {
+        setShow(true);
+        const timer = setTimeout(() => setShow(false), 2500);
+        const timer2 = setTimeout(onClose, 3000);
+        return () => {
+          clearTimeout(timer);
+          clearTimeout(timer2);
+        };
+      }
+    }, [message, onClose]);
+
+    if (!message) return null;
+
+    return (
+      <div
+        className={`fixed top-6 left-1/2 z-50 transform -translate-x-1/2 transition-all duration-500 ${
+          show ? "opacity-100" : "opacity-0 pointer-events-none"
+        } ${
+          type === "success"
+            ? "bg-emerald-100 border-emerald-400 text-emerald-800"
+            : "bg-red-100 border-red-400 text-red-800"
+        } border px-6 py-3 rounded-lg shadow-lg font-medium`}
+      >
+        {message}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+        <AlertMessage
+          message={alert.message}
+          type={alert.type}
+          onClose={() => setAlert({ message: "", type: "" })}
+        />
         <h1 className="text-3xl font-bold text-center text-slate-800 mb-6">
           Registro de chamada Carisma
         </h1>
@@ -574,7 +627,7 @@ function App() {
             {alunosSelecionados.length > 0 && (
               <div className="mt-4 flex justify-end">
                 <button
-                  onClick={deletarAlunosSelecionados}
+                  onClick={() => setModal("confirmarExclusaoAluno")}
                   className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
                 >
                   Deletar {alunosSelecionados.length} aluno(s)
@@ -585,7 +638,7 @@ function App() {
         )}
       </div>
 
-      {/* Modal de confirmação */}
+      {/* Modal de confirmação de exclusão de registros */}
       {modal === "confirmarExclusao" && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full">
@@ -603,7 +656,42 @@ function App() {
                 Cancelar
               </button>
               <button
-                onClick={deletarSelecionados}
+                onClick={async () => {
+                  await deletarSelecionados();
+                  setModal(null);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão de alunos */}
+      {modal === "confirmarExclusaoAluno" && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-xl max-w-sm w-full">
+            <h3 className="text-xl font-bold text-red-700 mb-4">
+              Confirmar exclusão
+            </h3>
+            <p className="text-slate-700 mb-6">
+              Tem certeza que deseja excluir {alunosSelecionados.length}{" "}
+              aluno(s)?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setModal(null)}
+                className="bg-slate-300 text-slate-800 px-4 py-2 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await deletarAlunosSelecionados();
+                  setModal(null);
+                }}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg"
               >
                 Confirmar

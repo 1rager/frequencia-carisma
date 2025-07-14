@@ -35,7 +35,7 @@ db.run(`
 db.run(`
   CREATE TABLE IF NOT EXISTS frequencia (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    matricula TEXT UNIQUE,
+    matricula TEXT,
     data DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
