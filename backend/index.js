@@ -19,6 +19,7 @@ const db = new sqlite3.Database("frequencia.db");
 db.run(`
   CREATE TABLE IF NOT EXISTS alunos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    matricula TEXT UNIQUE,
     nome TEXT NOT NULL,
     telefone TEXT,
     rua TEXT,
@@ -120,19 +121,31 @@ app.post("/frequencia/delete", (req, res) => {
 // Criar aluno
 app.post("/alunos", (req, res) => {
   const aluno = req.body;
-  console.log("Dados recebidos para cadastro de aluno:", JSON.stringify(aluno, null, 2));
   const { nome, telefone, rua, numero, bairro, cidade, estado, pais } = aluno;
-  
-  const query = `INSERT INTO alunos (nome, telefone, rua, numero, bairro, cidade, estado, pais)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.run(query, [nome, telefone, rua, numero, bairro, cidade, estado, pais], function (err) {
+  // Buscar o último número de matrícula
+  db.get("SELECT MAX(id) as lastId FROM alunos", [], (err, row) => {
     if (err) {
-      console.error("Erro ao inserir aluno:", err.message);
+      console.error("Erro ao buscar último id:", err.message);
       return res.status(500).json({ erro: err.message });
     }
-    console.log("Aluno inserido com ID:", this.lastID);
-    res.status(201).json({ id: this.lastID });
+    const nextNumber = (row?.lastId || 0) + 1;
+    const matricula = `CLUSA${String(nextNumber).padStart(7, "1")}`;
+
+    const query = `INSERT INTO alunos (matricula, nome, telefone, rua, numero, bairro, cidade, estado, pais)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    db.run(
+      query,
+      [matricula, nome, telefone, rua, numero, bairro, cidade, estado, pais],
+      function (err) {
+        if (err) {
+          console.error("Erro ao inserir aluno:", err.message);
+          return res.status(500).json({ erro: err.message });
+        }
+        res.status(201).json({ id: this.lastID, matricula });
+      }
+    );
   });
 });
 

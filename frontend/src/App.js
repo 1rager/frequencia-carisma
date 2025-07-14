@@ -86,6 +86,17 @@ function App() {
 
   const registrarPresenca = async () => {
     if (!novaMatricula.trim()) return;
+
+    // Verifica se matrícula existe entre os alunos cadastrados
+    const alunoExiste = alunos.some(
+      (a) => a.matricula === novaMatricula.trim()
+    );
+    if (!alunoExiste) {
+      setMensagem("⚠️ Matrícula não encontrada. Cadastre o aluno primeiro.");
+      setTimeout(() => setMensagem(""), 3000);
+      return;
+    }
+
     try {
       await axios.post(`${API_BASE_URL}/registrar`, {
         matricula: novaMatricula.trim(),
@@ -541,7 +552,7 @@ function App() {
                             onChange={() => toggleAlunoSelecionado(aluno.id)}
                           />
                         </td>
-                        <td className="p-3">{aluno.id}</td>
+                        <td className="p-3">{aluno.matricula}</td>
                         <td className="p-3">{aluno.nome}</td>
                         <td className="p-3">{aluno.telefone}</td>
                         <td className="p-3">
