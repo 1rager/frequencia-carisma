@@ -130,7 +130,7 @@ app.post("/alunos", (req, res) => {
       return res.status(500).json({ erro: err.message });
     }
     const nextNumber = (row?.lastId || 0) + 1;
-    const matricula = `CLUSA${String(nextNumber).padStart(7, "1")}`;
+    const matricula = `CLUSA${String(nextNumber).padStart(7, "0")}`;
 
     const query = `INSERT INTO alunos (matricula, nome, telefone, rua, numero, bairro, cidade, estado, pais)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
