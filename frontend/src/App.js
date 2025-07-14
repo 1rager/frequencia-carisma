@@ -32,12 +32,9 @@ function App() {
   const [alunosSelecionados, setAlunosSelecionados] = useState([]);
   const [alunos, setAlunos] = useState([]);
 
-
   useEffect(() => {
     carregarRegistrosDoMesAtual();
   }, []);
-
-  
 
   useEffect(() => {
     if (abaAtiva === "cadastro") {
@@ -175,16 +172,17 @@ function App() {
 
       // Validação mínima opcional
       if (!aluno.nome || aluno.nome.trim() === "") {
-        setTimeout(() => setMensagem("⚠️ Nome é obrigatório."), 3000);
+        setMensagemAluno("⚠️ Nome é obrigatório.");
+        setTimeout(() => setMensagemAluno(""), 3000);
         return;
       }
 
       const resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
 
       if (resposta.status === 201 && resposta.data.id) {
-        setTimeout(() => setMensagemAluno("✅ Aluno cadastrado com sucesso!"), 3000);
-        // Limpar formulário
-        setNome("");
+        setMensagemAluno("✅ Aluno cadastrado com sucesso!"),
+          // Limpar formulário
+          setNome("");
         setTelefone("");
         setRua("");
         setNumero("");
@@ -197,11 +195,18 @@ function App() {
         buscarAlunos();
       } else {
         console.warn("Resposta inesperada:", resposta);
-        setTimeout(() => setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno."), 3000);
+        setTimeout(
+          () =>
+            setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno."),
+          3000
+        );
       }
     } catch (error) {
       console.error("Erro ao cadastrar aluno:", error);
-      setTimeout(() => setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente."), 3000);
+      setTimeout(
+        () => setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente."),
+        3000
+      );
     }
   };
 
@@ -337,33 +342,16 @@ function App() {
             </section>
 
             {/* Ações */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-              <button
-                onClick={() => {
-                  setModoSelecao(!modoSelecao);
-                  setSelecionados([]);
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-              >
-                {modoSelecao ? "Cancelar Exclusão" : "Selecionar para Deletar"}
-              </button>
-              <button
-                onClick={exportarParaExcel}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-              >
-                Exportar Excel
-              </button>
-            </div>
 
             {/* Tabela */}
             <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm">
               <table className="w-full min-w-[600px] table-auto text-left">
                 <thead className="bg-slate-100">
                   <tr>
-                    {modoSelecao && <th className="p-3">✓</th>}
-                    <th className="p-3">ID</th>
+                    <th className="p-3">✓</th>
                     <th className="p-3">Matrícula</th>
                     <th className="p-3">Data/Hora</th>
+                    <th className="p-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,19 +367,22 @@ function App() {
                   ) : (
                     registros.map((item) => (
                       <tr key={item.id} className="border-t hover:bg-slate-50">
-                        {modoSelecao && (
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={selecionados.includes(item.id)}
-                              onChange={() => toggleSelecionado(item.id)}
-                            />
-                          </td>
-                        )}
-                        <td className="p-3">{item.id}</td>
+                        <td className="p-3">
+                          <input
+                            type="checkbox"
+                            checked={selecionados.includes(item.id)}
+                            onChange={() => toggleSelecionado(item.id)}
+                          />
+                        </td>
+
                         <td className="p-3">{item.matricula}</td>
                         <td className="p-3">
                           {new Date(item.data).toLocaleString("pt-BR")}
+                        </td>
+                        <td className="text-center p-3">
+                          <button onClick={() => editarRegistro(item.id)}>
+                            ✏️
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -400,16 +391,22 @@ function App() {
               </table>
             </div>
 
-            {modoSelecao && selecionados.length > 0 && (
-              <div className="flex justify-end mt-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4 mt-4">
+              <button
+                onClick={exportarParaExcel}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+              >
+                Exportar Excel
+              </button>
+              {selecionados.length > 0 && (
                 <button
                   onClick={() => setModal("confirmarExclusao")}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
                 >
                   Deletar Selecionados
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
 
@@ -513,10 +510,12 @@ function App() {
               <table className="w-full min-w-[600px] table-auto text-left">
                 <thead className="bg-slate-100">
                   <tr>
-                    <th className="p-3">ID</th>
+                    <th className="p-3">✓</th>
+                    <th className="p-3">Matrícula</th>
                     <th className="p-3">Nome</th>
                     <th className="p-3">Telefone</th>
                     <th className="p-3">Endereço</th>
+                    <th className="p-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -548,6 +547,11 @@ function App() {
                         <td className="p-3">
                           {aluno.rua}, {aluno.numero} - {aluno.bairro},{" "}
                           {aluno.cidade} - {aluno.estado}, {aluno.pais}
+                        </td>
+                        <td className="text-center p-3">
+                          <button onClick={() => editarAluno(aluno.id)}>
+                            ✏️
+                          </button>
                         </td>
                       </tr>
                     ))
