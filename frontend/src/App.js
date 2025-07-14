@@ -30,15 +30,14 @@ function App() {
   const [pais, setPais] = useState("");
   const [mensagemAluno, setMensagemAluno] = useState("");
   const [alunosSelecionados, setAlunosSelecionados] = useState([]);
-  
+  const [alunos, setAlunos] = useState([]);
 
-  const API = "https://frequencia-backend.up.railway.app";
 
   useEffect(() => {
     carregarRegistrosDoMesAtual();
   }, []);
 
-  const [alunos, setAlunos] = useState([]);
+  
 
   useEffect(() => {
     if (abaAtiva === "cadastro") {
@@ -176,15 +175,14 @@ function App() {
 
       // Validação mínima opcional
       if (!aluno.nome || aluno.nome.trim() === "") {
-        setMensagemAluno("⚠️ Nome é obrigatório.");
+        setTimeout(() => setMensagem("⚠️ Nome é obrigatório."), 3000);
         return;
       }
 
       const resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
 
       if (resposta.status === 201 && resposta.data.id) {
-        setMensagemAluno("✅ Aluno cadastrado com sucesso!");
-
+        setTimeout(() => setMensagemAluno("✅ Aluno cadastrado com sucesso!"), 3000);
         // Limpar formulário
         setNome("");
         setTelefone("");
@@ -199,42 +197,41 @@ function App() {
         buscarAlunos();
       } else {
         console.warn("Resposta inesperada:", resposta);
-        setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno.");
+        setTimeout(() => setMensagemAluno("⚠️ Ocorreu um problema ao cadastrar o aluno."), 3000);
       }
     } catch (error) {
       console.error("Erro ao cadastrar aluno:", error);
-      setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente.");
+      setTimeout(() => setMensagemAluno("❌ Erro ao cadastrar aluno. Tente novamente."), 3000);
     }
   };
 
-const toggleAlunoSelecionado = (id) => {
-  setAlunosSelecionados((prev) =>
-    prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-  );
-};
+  const toggleAlunoSelecionado = (id) => {
+    setAlunosSelecionados((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
 
+  const deletarAlunosSelecionados = async () => {
+    if (alunosSelecionados.length === 0) return;
 
-const deletarAlunosSelecionados = async () => {
-  if (alunosSelecionados.length === 0) return;
+    const confirmacao = window.confirm(
+      "Tem certeza que deseja excluir os alunos selecionados?"
+    );
+    if (!confirmacao) return;
 
-  const confirmacao = window.confirm(
-    "Tem certeza que deseja excluir os alunos selecionados?"
-  );
-  if (!confirmacao) return;
+    try {
+      for (const id of alunosSelecionados) {
+        await axios.delete(`${API_BASE_URL}/alunos/${id}`);
+      }
 
-  try {
-    for (const id of alunosSelecionados) {
-      await axios.delete(`${API_BASE_URL}/alunos/${id}`);
+      setMensagemAluno("✅ Alunos excluídos com sucesso!");
+      setAlunosSelecionados([]);
+      buscarAlunos();
+    } catch (e) {
+      console.error("Erro ao deletar alunos:", e);
+      setMensagemAluno("❌ Erro ao deletar alunos.");
     }
-
-    setMensagemAluno("✅ Alunos excluídos com sucesso!");
-    setAlunosSelecionados([]);
-    buscarAlunos();
-  } catch (e) {
-    console.error("Erro ao deletar alunos:", e);
-    setMensagemAluno("❌ Erro ao deletar alunos.");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">

@@ -9,17 +9,6 @@ const allowedOrigins = [
   "http://localhost:3001", // <-- adicione esta linha
 ];
 
-// app.use(
-//   cors({
-//     origin: function (origin, callback) {
-//       if (!origin || allowedOrigins.includes(origin))
-//         return callback(null, true);
-//       return callback(new Error("Não autorizado pelo CORS"));
-//     },
-//     methods: ["GET", "POST", "OPTIONS"],
-//   })
-// );
-
 app.use(cors());
 app.use(express.json());
 
@@ -130,28 +119,21 @@ app.post("/frequencia/delete", (req, res) => {
 
 // Criar aluno
 app.post("/alunos", (req, res) => {
-  const { aluno } = req.body;
-  console.log(
-    "Dados recebidos para cadastro de aluno:",
-    JSON.stringify(aluno, null, 2)
-  );
+  const aluno = req.body;
+  console.log("Dados recebidos para cadastro de aluno:", JSON.stringify(aluno, null, 2));
   const { nome, telefone, rua, numero, bairro, cidade, estado, pais } = aluno;
-
+  
   const query = `INSERT INTO alunos (nome, telefone, rua, numero, bairro, cidade, estado, pais)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.run(
-    query,
-    [nome, telefone, rua, numero, bairro, cidade, estado, pais],
-    function (err) {
-      if (err) {
-        console.error("Erro ao inserir aluno:", err.message);
-        return res.status(500).json({ erro: err.message });
-      }
-      console.log("Aluno inserido com ID:", this.lastID);
-      res.status(201).json({ id: this.lastID });
+  db.run(query, [nome, telefone, rua, numero, bairro, cidade, estado, pais], function (err) {
+    if (err) {
+      console.error("Erro ao inserir aluno:", err.message);
+      return res.status(500).json({ erro: err.message });
     }
-  );
+    console.log("Aluno inserido com ID:", this.lastID);
+    res.status(201).json({ id: this.lastID });
+  });
 });
 
 // Listar alunos
