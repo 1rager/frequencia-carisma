@@ -130,7 +130,7 @@ app.post("/frequencia/delete", (req, res) => {
 
 // Criar aluno
 app.post("/alunos", (req, res) => {
-  const aluno = req.body;
+  const { aluno } = req.body;
   console.log(
     "Dados recebidos para cadastro de aluno:",
     JSON.stringify(aluno, null, 2)

@@ -29,6 +29,8 @@ function App() {
   const [estado, setEstado] = useState("");
   const [pais, setPais] = useState("");
   const [mensagemAluno, setMensagemAluno] = useState("");
+  const [alunosSelecionados, setAlunosSelecionados] = useState([]);
+  
 
   const API = "https://frequencia-backend.up.railway.app";
 
@@ -41,7 +43,7 @@ function App() {
   useEffect(() => {
     if (abaAtiva === "cadastro") {
       axios
-        .get("http://localhost:3000/alunos")
+        .get(`${API_BASE_URL}/alunos`)
         .then((res) => setAlunos(res.data))
         .catch((err) => console.error("Erro ao buscar alunos:", err));
     }
@@ -154,7 +156,7 @@ function App() {
 
   const buscarAlunos = () => {
     axios
-      .get("http://localhost:3000/alunos")
+      .get(`${API_BASE_URL}/alunos`)
       .then((res) => setAlunos(res.data))
       .catch((err) => console.error("Erro ao buscar alunos:", err));
   };
@@ -205,6 +207,35 @@ function App() {
     }
   };
 
+const toggleAlunoSelecionado = (id) => {
+  setAlunosSelecionados((prev) =>
+    prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+  );
+};
+
+
+const deletarAlunosSelecionados = async () => {
+  if (alunosSelecionados.length === 0) return;
+
+  const confirmacao = window.confirm(
+    "Tem certeza que deseja excluir os alunos selecionados?"
+  );
+  if (!confirmacao) return;
+
+  try {
+    for (const id of alunosSelecionados) {
+      await axios.delete(`${API_BASE_URL}/alunos/${id}`);
+    }
+
+    setMensagemAluno("✅ Alunos excluídos com sucesso!");
+    setAlunosSelecionados([]);
+    buscarAlunos();
+  } catch (e) {
+    console.error("Erro ao deletar alunos:", e);
+    setMensagemAluno("❌ Erro ao deletar alunos.");
+  }
+};
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
@@ -238,7 +269,7 @@ function App() {
           </nav>
         </div>
 
-        {/* Conteúdo da aba de Registro */}
+        {/* Conteúdo da aba de Registro de presença */}
         {abaAtiva === "presenca" && (
           <>
             {/* Registrar presença */}
@@ -385,7 +416,7 @@ function App() {
           </>
         )}
 
-        {/* Conteúdo da aba de Cadastro */}
+        {/* Conteúdo da aba de Cadastro de aluno */}
         {abaAtiva === "cadastro" && (
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-slate-700 mb-4 border-b pb-2">
@@ -495,7 +526,7 @@ function App() {
                   {alunos.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="text-center py-6 text-slate-500"
                       >
                         Nenhum aluno cadastrado.
@@ -507,6 +538,13 @@ function App() {
                         key={aluno.id}
                         className="border-t hover:bg-slate-50 transition"
                       >
+                        <td className="p-3">
+                          <input
+                            type="checkbox"
+                            checked={alunosSelecionados.includes(aluno.id)}
+                            onChange={() => toggleAlunoSelecionado(aluno.id)}
+                          />
+                        </td>
                         <td className="p-3">{aluno.id}</td>
                         <td className="p-3">{aluno.nome}</td>
                         <td className="p-3">{aluno.telefone}</td>
@@ -520,6 +558,17 @@ function App() {
                 </tbody>
               </table>
             </div>
+
+            {alunosSelecionados.length > 0 && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={deletarAlunosSelecionados}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+                >
+                  Deletar {alunosSelecionados.length} aluno(s)
+                </button>
+              </div>
+            )}
           </section>
         )}
       </div>
