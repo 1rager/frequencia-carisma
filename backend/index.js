@@ -31,6 +31,17 @@ db.run(`
   )
 `);
 
+// Garante que a coluna matricula existe (para deploys em Railway)
+db.get("PRAGMA table_info(alunos)", (err, columns) => {
+  if (err) return;
+  const hasMatricula = Array.isArray(columns)
+    ? columns.some((col) => col.name === "matricula")
+    : false;
+  if (!hasMatricula) {
+    db.run("ALTER TABLE alunos ADD COLUMN matricula TEXT UNIQUE");
+  }
+});
+
 // Cria tabela se não existir
 db.run(`
   CREATE TABLE IF NOT EXISTS frequencia (
