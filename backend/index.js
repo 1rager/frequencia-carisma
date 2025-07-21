@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
 const app = express();
@@ -11,7 +12,10 @@ const allowedOrigins = [
 
 app.use(cors());
 app.use(express.json());
-
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+});
 // Inicializa banco
 const db = new sqlite3.Database("frequencia.db");
 
@@ -186,4 +190,10 @@ app.delete("/alunos/:id", (req, res) => {
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
+});
+
+
+// INICIA O SERVIDOR
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });

@@ -30,7 +30,6 @@ function App() {
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
   const [pais, setPais] = useState("");
-  const [mensagemAluno, setMensagemAluno] = useState("");
   const [alunosSelecionados, setAlunosSelecionados] = useState([]);
   const [alunos, setAlunos] = useState([]);
 
@@ -98,7 +97,6 @@ function App() {
         message: "⚠️ Matrícula não encontrada. Cadastre o aluno primeiro.",
         type: "error",
       });
-      setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
       return;
     }
 
@@ -112,10 +110,8 @@ function App() {
       });
       setNovaMatricula("");
       carregarRegistrosDoMesAtual();
-      setTimeout(() => setAlert({ message: "", type: "success" }), 3000);
     } catch {
       setAlert({ message: "❌ Erro ao registrar presença", type: "error" });
-      setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
     }
   };
 
@@ -193,7 +189,6 @@ function App() {
       // Validação mínima opcional
       if (!aluno.nome || aluno.nome.trim() === "") {
         setAlert({ message: "⚠️ Nome é obrigatório.", type: "error" });
-        setTimeout(() => setAlert({ message: "", type: "error" }), 3000);
         return;
       }
 
@@ -204,7 +199,6 @@ function App() {
           message: "✅ Aluno cadastrado com sucesso!",
           type: "success",
         });
-        setTimeout(() => setAlert({ message: "", type: "success" }), 3000);
         // Limpar formulário
         setNome("");
         setTelefone("");
@@ -219,25 +213,19 @@ function App() {
         buscarAlunos();
       } else {
         console.warn("Resposta inesperada:", resposta);
-        setTimeout(
-          () =>
-            setAlert({
-              message: "⚠️ Ocorreu um problema ao cadastrar o aluno.",
-              type: "error",
-            }),
-          3000
-        );
+
+        setAlert({
+          message: "⚠️ Ocorreu um problema ao cadastrar o aluno.",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Erro ao cadastrar aluno:", error);
-      setTimeout(
-        () =>
-          setAlert({
-            message: "❌ Erro ao cadastrar aluno. Tente novamente.",
-            type: "error",
-          }),
-        3000
-      );
+
+      setAlert({
+        message: "❌ Erro ao cadastrar aluno. Tente novamente.",
+        type: "error",
+      });
     }
   };
 
@@ -271,8 +259,8 @@ function App() {
     useEffect(() => {
       if (message) {
         setShow(true);
-        const timer = setTimeout(() => setShow(false), 2500);
-        const timer2 = setTimeout(onClose, 3000);
+        const timer = setTimeout(() => setShow(false), 3500);
+        const timer2 = setTimeout(onClose, 4500);
         return () => {
           clearTimeout(timer);
           clearTimeout(timer2);
@@ -284,13 +272,13 @@ function App() {
 
     return (
       <div
-        className={`fixed top-6 left-1/2 z-50 transform -translate-x-1/2 transition-all duration-500 ${
+        className={`transition-all duration-500 ${
           show ? "opacity-100" : "opacity-0 pointer-events-none"
         } ${
           type === "success"
             ? "bg-emerald-100 border-emerald-400 text-emerald-800"
             : "bg-red-100 border-red-400 text-red-800"
-        } border px-6 py-3 rounded-lg shadow-lg font-medium`}
+        } border px-8 py-4 rounded-lg shadow-lg font-semibold text-lg`}
       >
         {message}
       </div>
@@ -299,12 +287,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
-      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+      <div className="flex justify-center items-center mb-4">
         <AlertMessage
           message={alert.message}
           type={alert.type}
           onClose={() => setAlert({ message: "", type: "" })}
         />
+      </div>
+      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
         <h1 className="text-3xl font-bold text-center text-slate-800 mb-6">
           Registro de chamada Carisma
         </h1>
