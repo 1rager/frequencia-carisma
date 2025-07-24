@@ -10,13 +10,26 @@ const allowedOrigins = [
   "http://localhost:3001", // <-- adicione esta linha
 ];
 
-app.use(cors());
+//app.use(cors());
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+  })
+);
+
 app.use(express.json());
+
 app.use(express.static(path.join(__dirname, "../frontend/build")));
 
-// Middleware para permitir apenas origens específicas
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+// Rota fallback para React Router
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
 
