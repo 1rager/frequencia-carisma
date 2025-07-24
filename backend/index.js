@@ -3,7 +3,10 @@ const path = require("path");
 const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
 const allowedOrigins = [
   "https://frequencia-carisma.vercel.app",
   "http://localhost:3000", // já está aqui
@@ -28,8 +31,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend/build")));
 
 // Rota fallback para React Router
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
 });
 
 
@@ -203,8 +206,4 @@ app.delete("/alunos/:id", (req, res) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ id });
   });
-});
-
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
 });
