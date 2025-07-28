@@ -1,5 +1,5 @@
 {
-  "name": "frequencia-nfc",
+  "name": "frequencia-carisma",
   "version": "1.0.0",
   "scripts": {
     "install": "cd frontend && npm install && npm run build && cd ../backend && npm install",

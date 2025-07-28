@@ -20,6 +20,7 @@ function App() {
   const [selecionados, setSelecionados] = useState([]);
   const [modal, setModal] = useState(null);
   const [alert, setAlert] = useState({ message: "", type: "success" });
+  const [mensagemAluno, setMensagemAluno] = useState("");
 
   // Novos estados para cadastro de aluno
   const [nome, setNome] = useState("");
@@ -32,6 +33,8 @@ function App() {
   const [pais, setPais] = useState("");
   const [alunosSelecionados, setAlunosSelecionados] = useState([]);
   const [alunos, setAlunos] = useState([]);
+  const [cep, setCep] = useState("");
+  const [cepInvalido, setCepInvalido] = useState(false);
 
   useEffect(() => {
     carregarRegistrosDoMesAtual();
@@ -45,6 +48,26 @@ function App() {
         .catch((err) => console.error("Erro ao buscar alunos:", err));
     }
   }, [abaAtiva]);
+
+  useEffect(() => {
+    const cepLimpo = cep.replace(/\D/g, "");
+
+    const deveBuscar =
+      (pais === "BR" && cepLimpo.length === 8) ||
+      (pais === "US" && cepLimpo.length === 5);
+
+    if (deveBuscar) {
+      buscarEnderecoPorCep(cepLimpo);
+    }
+  }, [cep, pais]);
+
+  const limparCamposEndereco = () => {
+    setRua("");
+    setBairro("");
+    setCidade("");
+    setEstado("");
+    setPais("");
+  };
 
   const carregarRegistrosDoMesAtual = async () => {
     const hoje = new Date();
@@ -285,6 +308,59 @@ function App() {
     );
   }
 
+  // Função para buscar endereço pelo CEP
+  const verificarCep = async (e) => {
+    const valor = e.target.value.replace(/\D/g, "");
+    setCep(valor);
+
+    if (valor.length === 0) {
+      limparCamposEndereco();
+      setCepInvalido(false);
+      return;
+    }
+
+    if (valor.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${valor}/json/`);
+        const data = await response.json();
+
+        if (data.erro) {
+          setCepInvalido(true);
+          setTimeout(() => setCepInvalido(false), 2500);
+          limparCamposEndereco();
+        } else {
+          setRua(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "");
+          setEstado(data.uf || "");
+          setPais("Brasil");
+          setCepInvalido(false);
+        }
+      } catch {
+        setCepInvalido(true);
+        limparCamposEndereco();
+      }
+    } else if (valor.length === 5) {
+      try {
+        const response = await fetch(`https://api.zippopotam.us/us/${valor}`);
+        const data = await response.json();
+        const lugar = data.places?.[0];
+
+        setRua("");
+        setBairro("");
+        setCidade(lugar["place name"] || "");
+        setEstado(lugar["state abbreviation"] || "");
+        setPais(data.country || "USA");
+        setCepInvalido(false);
+      } catch {
+        setCepInvalido(true);
+        limparCamposEndereco();
+      }
+    } else {
+      setCepInvalido(false); // caso intermediário
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 sm:p-8 font-sans">
       <div className="flex justify-center items-center mb-4">
@@ -493,6 +569,26 @@ function App() {
                   />
                 )}
               </InputMask>
+
+              <div className="relative w-full">
+                <input
+                  id="cep"
+                  type="text"
+                  value={cep}
+                  onChange={verificarCep}
+                  placeholder="Digite o CEP"
+                  className={`w-full px-4 py-2 pr-20 border ${
+                    cepInvalido ? "border-red-500" : "border-slate-300"
+                  } rounded-lg`}
+                />
+
+                {cepInvalido && (
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2 text-red-600 text-xs pointer-events-none animate-fade-in-out">
+                    CEP inválido
+                  </div>
+                )}
+              </div>
+
               <input
                 type="text"
                 placeholder="Rua"
@@ -501,6 +597,7 @@ function App() {
                 maxLength={254}
                 className="px-4 py-2 border border-slate-300 rounded-lg"
               />
+
               <input
                 type="text"
                 placeholder="Número"
@@ -553,11 +650,11 @@ function App() {
                 Cadastrar Aluno
               </button>
             </div>
-            {mensagemAluno && (
+            {/* {mensagemAluno && (
               <div className="mt-2 text-center text-sm text-sky-700 font-medium">
                 {mensagemAluno}
               </div>
-            )}
+            )} */}
 
             {/* Tabela de Alunos */}
             <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm mb-6 mt-6">

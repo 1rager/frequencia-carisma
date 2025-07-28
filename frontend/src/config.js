@@ -1,6 +1,6 @@
 export const API_BASE_URL =
-  "https://frequencia-carisma-production.up.railway.app";
-// "http://localhost:3000"; // Descomente esta linha para usar o backend local
+ // "https://frequencia-carisma-production.up.railway.app";
+  "http://localhost:3000"; // Descomente esta linha para usar o backend local
 
 export const API_ROUTES = {
   registrar: `${API_BASE_URL}/registrar`,

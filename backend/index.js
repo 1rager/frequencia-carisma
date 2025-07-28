@@ -2,39 +2,24 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 const sqlite3 = require("sqlite3").verbose();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-const allowedOrigins = [
-  "https://frequencia-carisma.vercel.app",
-  "http://localhost:3000", // já está aqui
-  "http://localhost:3001", // <-- adicione esta linha
-];
 
-//app.use(cors());
-
+// ✅ Corrigido: CORS bem configurado
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: ["http://localhost:3001", "http://localhost:3000"],
   })
 );
 
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, "../frontend/build")));
 
-// Rota fallback para React Router
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
-});
-
+// // Rota fallback para React Router
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
+// });
 
 // Inicializa banco
 const db = new sqlite3.Database("frequencia.db");
@@ -206,4 +191,8 @@ app.delete("/alunos/:id", (req, res) => {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ id });
   });
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
