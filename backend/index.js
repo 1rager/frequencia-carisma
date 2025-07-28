@@ -6,7 +6,7 @@ const sqlite3 = require("sqlite3").verbose();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ✅ Corrigido: CORS bem configurado
+// Configuração do CORS
 app.use(
   cors({
     origin: ["http://localhost:3001", "http://localhost:3000"],
@@ -15,11 +15,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend/build")));
-
-// // Rota fallback para React Router
-// app.get("*", (req, res) => {
-//   res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
-// });
 
 // Inicializa banco
 const db = new sqlite3.Database("frequencia.db");
@@ -190,6 +185,31 @@ app.delete("/alunos/:id", (req, res) => {
   db.run("DELETE FROM alunos WHERE id = ?", [id], function (err) {
     if (err) return res.status(500).json({ erro: err.message });
     res.json({ id });
+  });
+});
+
+
+// Atualizar data/hora da frequência pelo id
+app.put("/frequencia/:id", (req, res) => {
+  const { id } = req.params;
+  const { data } = req.body;
+
+  if (!data) {
+    return res.status(400).json({ erro: "Campo 'data' é obrigatório" });
+  }
+
+  const query = `UPDATE frequencia SET data = ? WHERE id = ?`;
+  db.run(query, [data, id], function (err) {
+    if (err) {
+      console.error("Erro ao atualizar frequência:", err.message);
+      return res.status(500).json({ erro: "Erro ao atualizar frequência" });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ erro: "Registro não encontrado" });
+    }
+
+    res.json({ mensagem: "Frequência atualizada com sucesso", id });
   });
 });
 

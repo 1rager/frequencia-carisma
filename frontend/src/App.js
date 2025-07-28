@@ -35,11 +35,17 @@ function App() {
   const [alunos, setAlunos] = useState([]);
   const [cep, setCep] = useState("");
   const [cepInvalido, setCepInvalido] = useState(false);
+  const [alunoEditandoId, setAlunoEditandoId] = useState(null);
+  const [modalAberto, setModalAberto] = React.useState(false);
+  const [registroEditandoId, setRegistroEditandoId] = React.useState(null);
+  const [novaData, setNovaData] = React.useState("");
 
+  // Efeito para carregar registros do mês atual ao iniciar
   useEffect(() => {
     carregarRegistrosDoMesAtual();
   }, []);
 
+  // Efeito para buscar alunos quando a aba ativa for "cadastro"
   useEffect(() => {
     if (abaAtiva === "cadastro") {
       axios
@@ -49,6 +55,7 @@ function App() {
     }
   }, [abaAtiva]);
 
+// Efeito para buscar endereço por CEP quando o CEP ou país mudar
   useEffect(() => {
     const cepLimpo = cep.replace(/\D/g, "");
 
@@ -61,6 +68,7 @@ function App() {
     }
   }, [cep, pais]);
 
+  // Função para buscar endereço por CEP
   const limparCamposEndereco = () => {
     setRua("");
     setBairro("");
@@ -69,6 +77,7 @@ function App() {
     setPais("");
   };
 
+  // Carregar registros do mês atual
   const carregarRegistrosDoMesAtual = async () => {
     const hoje = new Date();
     const inicioMes = `${hoje.getFullYear()}-${String(
@@ -86,6 +95,7 @@ function App() {
     }
   };
 
+  // Buscar frequência
   const buscarFrequencia = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/frequencia`, {
@@ -101,6 +111,7 @@ function App() {
     }
   };
 
+  // Limpar filtros
   const limparFiltros = () => {
     setMatricula("");
     setDataInicial("");
@@ -108,6 +119,7 @@ function App() {
     carregarRegistrosDoMesAtual();
   };
 
+  // Registrar presença
   const registrarPresenca = async () => {
     if (!novaMatricula.trim()) return;
 
@@ -138,6 +150,7 @@ function App() {
     }
   };
 
+  // Cria tabela se não existir
   const exportarParaExcel = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/frequencia`, {
@@ -169,12 +182,14 @@ function App() {
     }
   };
 
+  // Função para alternar seleção de registros
   const toggleSelecionado = (id) => {
     setSelecionados((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
+  // Função para deletar registros selecionados
   const deletarSelecionados = async () => {
     try {
       await axios.post(`${API_BASE_URL}/frequencia/delete`, {
@@ -189,6 +204,7 @@ function App() {
     }
   };
 
+  // Função para buscar alunos
   const buscarAlunos = () => {
     axios
       .get(`${API_BASE_URL}/alunos`)
@@ -196,6 +212,7 @@ function App() {
       .catch((err) => console.error("Erro ao buscar alunos:", err));
   };
 
+  // Função para cadastrar ou editar aluno
   const cadastrarAluno = async () => {
     try {
       const aluno = {
@@ -209,55 +226,66 @@ function App() {
         pais,
       };
 
-      // Validação mínima opcional
       if (!aluno.nome || aluno.nome.trim() === "") {
         setAlert({ message: "⚠️ Nome é obrigatório.", type: "error" });
         return;
       }
 
-      const resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
+      let resposta;
 
-      if (resposta.status === 201 && resposta.data.id) {
+      if (alunoEditandoId) {
+        // 👉 Atualiza aluno existente
+        resposta = await axios.put(
+          `${API_BASE_URL}/alunos/${alunoEditandoId}`,
+          aluno
+        );
+
         setAlert({
-          message: "✅ Aluno cadastrado com sucesso!",
+          message: "✏️ Aluno atualizado com sucesso!",
           type: "success",
         });
-        // Limpar formulário
-        setNome("");
-        setTelefone("");
-        setRua("");
-        setNumero("");
-        setBairro("");
-        setCidade("");
-        setEstado("");
-        setPais("");
-
-        // Atualizar lista
-        buscarAlunos();
       } else {
-        console.warn("Resposta inesperada:", resposta);
+        // 👉 Cadastra novo aluno
+        resposta = await axios.post(`${API_BASE_URL}/alunos`, aluno);
 
-        setAlert({
-          message: "⚠️ Ocorreu um problema ao cadastrar o aluno.",
-          type: "error",
-        });
+        if (resposta.status === 201 && resposta.data.id) {
+          setAlert({
+            message: "✅ Aluno cadastrado com sucesso!",
+            type: "success",
+          });
+        }
       }
+
+      // Limpa tudo
+      setNome("");
+      setTelefone("");
+      setRua("");
+      setNumero("");
+      setBairro("");
+      setCidade("");
+      setEstado("");
+      setPais("");
+      setAlunoEditandoId(null); // Sai do modo edição
+
+      buscarAlunos(); // Atualiza a lista
     } catch (error) {
-      console.error("Erro ao cadastrar aluno:", error);
+      console.error("Erro ao salvar aluno:", error);
 
       setAlert({
-        message: "❌ Erro ao cadastrar aluno. Tente novamente.",
+        message: "❌ Erro ao salvar aluno. Tente novamente.",
         type: "error",
       });
     }
   };
 
+  // Função para alternar seleção de alunos
   const toggleAlunoSelecionado = (id) => {
     setAlunosSelecionados((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
+  // Função para deletar alunos selecionados
   const deletarAlunosSelecionados = async () => {
     if (alunosSelecionados.length === 0) return;
     try {
@@ -276,6 +304,7 @@ function App() {
     }
   };
 
+  // Função para buscar endereço por CEP
   function AlertMessage({ message, type, onClose }) {
     const [show, setShow] = useState(false);
 
@@ -308,7 +337,71 @@ function App() {
     );
   }
 
-  // Função para buscar endereço pelo CEP
+  // Função para limpar o formulário de aluno
+  const limparFormularioAluno = () => {
+    setNome("");
+    setTelefone("");
+    setRua("");
+    setNumero("");
+    setBairro("");
+    setCidade("");
+    setEstado("");
+    setPais("");
+    setAlunoEditandoId(null); // <-- importante para resetar o modo de edição
+  };
+
+  // Função para editar aluno
+  const editarAluno = (id) => {
+    const aluno = alunos.find((a) => a.id === id);
+    if (!aluno) return;
+
+    setNome(aluno.nome);
+    setTelefone(aluno.telefone);
+    setRua(aluno.rua);
+    setNumero(aluno.numero);
+    setBairro(aluno.bairro);
+    setCidade(aluno.cidade);
+    setEstado(aluno.estado);
+    setPais(aluno.pais);
+    setAlunoEditandoId(aluno.id); // Ativa modo edição
+  };
+
+  // Função para buscar endereço por CEP
+  const salvarEdicaoRegistro = async () => {
+    try {
+      // Faça a chamada PUT para atualizar no backend (ajuste a URL e payload conforme sua API)
+      await axios.put(`${API_BASE_URL}/frequencia/${registroEditandoId}`, {
+        data: novaData,
+      });
+
+      setAlert({
+        message: "✏️ Registro atualizado com sucesso!",
+        type: "success",
+      });
+      setModalAberto(false);
+      setRegistroEditandoId(null);
+      setNovaData("");
+      buscarRegistros(); // Atualize sua lista de registros
+    } catch (error) {
+      setAlert({ message: "❌ Erro ao atualizar registro.", type: "error" });
+      console.error(error);
+    }
+  };
+
+  // Função para buscar registros de frequência
+  function buscarRegistros() {
+    // Função para buscar registros de frequência
+    axios
+      .get(`${API_BASE_URL}/frequencia`)
+      .then((response) => {
+        setRegistros(response.data);
+      })
+      .catch((error) => {
+        console.error("Erro ao buscar registros:", error);
+      });
+  }
+
+  // Função para verificar CEP e preencher campos de endereço
   const verificarCep = async (e) => {
     const valor = e.target.value.replace(/\D/g, "");
     setCep(valor);
@@ -359,6 +452,13 @@ function App() {
     } else {
       setCepInvalido(false); // caso intermediário
     }
+  };
+
+  // Função para abrir modal de edição de registro
+  const abrirModalEdicaoRegistro = (registro) => {
+    setRegistroEditandoId(registro.id);
+    setNovaData(registro.data.slice(0, 16)); // Ajusta para o formato yyyy-MM-ddTHH:mm
+    setModalAberto(true);
   };
 
   return (
@@ -510,7 +610,9 @@ function App() {
                           {new Date(item.data).toLocaleString("pt-BR")}
                         </td>
                         <td className="text-center p-3">
-                          <button onClick={() => editarRegistro(item.id)}>
+                          <button
+                            onClick={() => abrirModalEdicaoRegistro(item)}
+                          >
                             ✏️
                           </button>
                         </td>
@@ -538,6 +640,38 @@ function App() {
               )}
             </div>
           </>
+        )}
+
+        {modalAberto && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+              <h2 className="text-xl font-semibold mb-4">
+                Editar Data/Hora da Presença
+              </h2>
+
+              <input
+                type="datetime-local"
+                value={novaData}
+                onChange={(e) => setNovaData(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg mb-4"
+              />
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setModalAberto(false)}
+                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarEdicaoRegistro}
+                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Conteúdo da aba de Cadastro de aluno */}
@@ -647,15 +781,19 @@ function App() {
                 onClick={cadastrarAluno}
                 className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-lg"
               >
-                Cadastrar Aluno
+                {alunoEditandoId ? "Salvar alterações" : "Cadastrar Aluno"}
               </button>
-            </div>
-            {/* {mensagemAluno && (
-              <div className="mt-2 text-center text-sm text-sky-700 font-medium">
-                {mensagemAluno}
-              </div>
-            )} */}
 
+              {alunoEditandoId && (
+                <button
+                  onClick={limparFormularioAluno}
+                  className="ml-4 bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded-lg"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+   
             {/* Tabela de Alunos */}
             <div className="overflow-auto rounded-lg border border-slate-200 shadow-sm mb-6 mt-6">
               <table className="w-full min-w-[600px] table-auto text-left">
